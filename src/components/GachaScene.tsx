@@ -1,35 +1,57 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useGameStore } from '../store/gameStore';
 
 function HeartBox({ isAnimating }: { isAnimating: boolean }) {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const boxRef = useRef<THREE.Group>(null);
+  const lidRef = useRef<THREE.Mesh>(null);
+  const baseRef = useRef<THREE.Mesh>(null);
   
   useFrame((state) => {
-    if (meshRef.current && isAnimating) {
-      meshRef.current.rotation.y += 0.05;
-      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.1;
+    if (boxRef.current) {
+      // Base box floating animation
+      boxRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.1;
       
-      // Add shake animation when opening
       if (isAnimating) {
-        meshRef.current.position.x = Math.sin(state.clock.elapsedTime * 20) * 0.05;
-        meshRef.current.scale.set(
-          1 + Math.sin(state.clock.elapsedTime * 10) * 0.1,
-          1 + Math.sin(state.clock.elapsedTime * 10) * 0.1,
-          1 + Math.sin(state.clock.elapsedTime * 10) * 0.1
-        );
+        // Rotate the entire box
+        boxRef.current.rotation.y += 0.05;
+        
+        // Open lid animation
+        if (lidRef.current) {
+          lidRef.current.rotation.x = Math.min(
+            Math.PI * 0.6, // Maximum opening angle
+            lidRef.current.rotation.x + 0.1 // Opening speed
+          );
+        }
+        
+        // Shake animation during opening
+        boxRef.current.position.x = Math.sin(state.clock.elapsedTime * 20) * 0.05;
+      } else {
+        // Close lid when not animating
+        if (lidRef.current && lidRef.current.rotation.x > 0) {
+          lidRef.current.rotation.x = Math.max(0, lidRef.current.rotation.x - 0.1);
+        }
       }
     }
   });
 
   return (
-    <mesh ref={meshRef} scale={isAnimating ? 1.2 : 1}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#FFB6C1" metalness={0.5} roughness={0.2} />
-    </mesh>
+    <group ref={boxRef} position={[0, 0, 0]}>
+      {/* Base of the box */}
+      <mesh ref={baseRef} position={[0, -0.5, 0]}>
+        <boxGeometry args={[1, 1.5, 1]} /> {/* Taller box */}
+        <meshStandardMaterial color="#FFB6C1" metalness={0.5} roughness={0.2} />
+      </mesh>
+      
+      {/* Lid of the box */}
+      <mesh ref={lidRef} position={[0, 0.25, 0.5]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[1, 0.2, 1]} />
+        <meshStandardMaterial color="#FF69B4" metalness={0.5} roughness={0.2} />
+      </mesh>
+    </group>
   );
 }
 
